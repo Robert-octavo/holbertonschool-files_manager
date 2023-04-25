@@ -6,16 +6,28 @@ all endpoints of our API:
 
   - POST /users => UsersController.postNew
 
+  Add the new endpoints to the file routes/index.js:
+  
+  - GET /connect => AuthController.getConnect
+  - GET /disconnect => AuthController.getDisconnect
+  - GET /users/me => UserController.getMe
+
+
 */
 
 const express = require('express');
 const AppController = require('../controllers/AppController');
 const UsersController = require('../controllers/UsersController');
+const AuthController = require('../controllers/AuthController');
+const UserController = require('../controllers/UserController');
 
 const router = express.Router();
 
 router.get('/status', AppController.getStatus);
 router.get('/stats', AppController.getStats);
 router.post('/users', UsersController.postNew);
+router.get('/connect', AuthController.getConnect);
+router.get('/disconnect', AuthController.getDisconnect);
+router.get('/users/me', UserController.getMe);
 
 module.exports = router;
