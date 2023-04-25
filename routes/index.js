@@ -7,7 +7,7 @@ all endpoints of our API:
   - POST /users => UsersController.postNew
 
   Add the new endpoints to the file routes/index.js:
-  
+
   - GET /connect => AuthController.getConnect
   - GET /disconnect => AuthController.getDisconnect
   - GET /users/me => UserController.getMe
@@ -22,7 +22,7 @@ const express = require('express');
 const AppController = require('../controllers/AppController');
 const UsersController = require('../controllers/UsersController');
 const AuthController = require('../controllers/AuthController');
-const UserController = require('../controllers/UserController');
+const UserController = require('../controllers/UsersController');
 const FilesController = require('../controllers/FilesController');
 
 const router = express.Router();
