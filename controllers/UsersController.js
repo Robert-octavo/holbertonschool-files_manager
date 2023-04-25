@@ -14,6 +14,14 @@ POST /users should create a new user in DB:
     - email: same as the value received
     - password: SHA1 value of the value received
 
+add a new endpoint:
+
+GET /users/me should retrieve the user base on the token used:
+
+  - Retrieve the user based on the token:
+    - If not found, return an error Unauthorized with a status code 401
+    - Otherwise, return the user object (email and id only)
+
 */
 
 const sha1 = require('sha1');
@@ -46,6 +54,19 @@ const UsersController = {
     });
     return res.status(201).json({ email, id });
   },
+
+  getMe: async (req, res) => {
+    const { token } = req.headers;
+    if (!token) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const user = await dbClient.client.collection('users').findOne({ id: token });
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    return res.status(200).json({ email: user.email, id: user.id });
+  },
+
 };
 
 module.exports = UsersController;
