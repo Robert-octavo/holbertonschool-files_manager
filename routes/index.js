@@ -20,6 +20,12 @@ add 2 new endpoints:
 
   - GET /files/:id => FilesController.getShow
   - GET /files => FilesController.getIndex
+
+add 2 new endpoints:
+
+  - PUT /files/:id/publish => FilesController.putPublish
+  - PUT /files/:id/publish => FilesController.putUnpublish
+
 */
 
 const express = require('express');
@@ -40,5 +46,7 @@ router.get('/users/me', UserController.getMe);
 router.post('/files', FilesController.postUpload);
 router.get('/files/:id', FilesController.getShow);
 router.get('/files', FilesController.getIndex);
+router.put('/files/:id/publish', FilesController.putPublish);
+router.put('/files/:id/unpublish', FilesController.putUnpublish);
 
 module.exports = router;

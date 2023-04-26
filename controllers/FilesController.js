@@ -63,6 +63,26 @@ GET /files should retrieve all users file documents for a specific parentId and 
       it means it’s the second page (form the 20th to the 40th), etc…
       - Pagination can be done directly by the aggregate of MongoDB
 
+-- 2 new endpoints:
+
+PUT /files/:id/publish should set isPublic to true on the file document based on the ID:
+
+  - Retrieve the user based on the token:
+    - If not found, return an error Unauthorized with a status code 401
+  - If no file document is linked to the user and the ID passed as parameter, return an error Not found with a status code 404
+  - Otherwise:
+    - Update the value of isPublic to true
+    - And return the file document with a status code 200
+
+PUT /files/:id/unpublish should set isPublic to false on the file document based on the ID:
+
+  - Retrieve the user based on the token:
+    - If not found, return an error Unauthorized with a status code 401
+  - If no file document is linked to the user and the ID passed as parameter, return an error Not found with a status code 404
+  - Otherwise:
+    - Update the value of isPublic to false
+    - And return the file document with a status code 200
+
 */
 
 const fs = require('fs');
@@ -225,6 +245,90 @@ const FilesController = {
     }));
 
     return res.status(200).json(filesList);
+  },
+
+  putPublish: async (req, res) => {
+    const { token } = req.headers;
+    const { id } = req.params;
+
+    if (!token) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const user = await dbClient.client.collection('users').findOne({ _id: ObjectId(token) });
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const file = await dbClient.client.collection('files').findOne({ _id: ObjectId(id) });
+    if (!file) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    if (file.userId.toString() !== user._id.toString()) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const updateFile = await dbClient.client.collection('files').updateOne(
+      { _id: ObjectId(id) },
+      { $set: { isPublic: true } },
+    );
+
+    if (!updateFile) {
+      return res.status(500).json({ error: 'Can\'t update file' });
+    }
+
+    return res.status(200).json({
+      id: file._id,
+      userId: file.userId,
+      name: file.name,
+      type: file.type,
+      isPublic: true,
+      parentId: file.parentId,
+      localPath: file.localPath,
+    });
+  },
+
+  putUnpublish: async (req, res) => {
+    const { token } = req.headers;
+    const { id } = req.params;
+
+    if (!token) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const user = await dbClient.client.collection('users').findOne({ _id: ObjectId(token) });
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const file = await dbClient.client.collection('files').findOne({ _id: ObjectId(id) });
+    if (!file) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    if (file.userId.toString() !== user._id.toString()) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const updateFile = await dbClient.client.collection('files').updateOne(
+      { _id: ObjectId(id) },
+      { $set: { isPublic: false } },
+    );
+
+    if (!updateFile) {
+      return res.status(500).json({ error: 'Can\'t update file' });
+    }
+
+    return res.status(200).json({
+      id: file._id,
+      userId: file.userId,
+      name: file.name,
+      type: file.type,
+      isPublic: false,
+      parentId: file.parentId,
+      localPath: file.localPath,
+    });
   },
 };
 
