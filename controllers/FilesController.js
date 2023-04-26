@@ -69,7 +69,8 @@ PUT /files/:id/publish should set isPublic to true on the file document based on
 
   - Retrieve the user based on the token:
     - If not found, return an error Unauthorized with a status code 401
-  - If no file document is linked to the user and the ID passed as parameter, return an error Not found with a status code 404
+  - If no file document is linked to the user and the ID passed as parameter, return
+  an error Not found with a status code 404
   - Otherwise:
     - Update the value of isPublic to true
     - And return the file document with a status code 200
@@ -78,17 +79,35 @@ PUT /files/:id/unpublish should set isPublic to false on the file document based
 
   - Retrieve the user based on the token:
     - If not found, return an error Unauthorized with a status code 401
-  - If no file document is linked to the user and the ID passed as parameter, return an error Not found with a status code 404
+  - If no file document is linked to the user and the ID passed as parameter, return
+  an error Not found with a status code 404
   - Otherwise:
     - Update the value of isPublic to false
     - And return the file document with a status code 200
+
+add the new endpoint:
+
+GET /files/:id/data should return the content of the file document based on the ID:
+
+  - If no file document is linked to the ID passed as parameter, return an error
+  Not found with a status code 404
+  - If the file document (folder or file) is not public (isPublic: false) and no
+  user authenticate or not the owner of the file, return an error Not found with a status code 404
+  - If the type of the file document is folder, return an error A folder doesn't
+  have content with a status code 400
+  - If the file is not locally present, return an error Not found with a status code 404
+  - Otherwise:
+    - By using the module mime-types, get the MIME-type based on the name of the file
+    - Return the content of the file with the correct MIME-type
 
 */
 
 const fs = require('fs');
 const { ObjectId } = require('mongodb');
 const { v4: uuidv4 } = require('uuid');
+const mime = require('mime-types');
 const dbClient = require('../utils/db');
+// const redisClient = require('../utils/redis');
 
 const FilesController = {
   postUpload: async (req, res) => {
@@ -329,6 +348,51 @@ const FilesController = {
       parentId: file.parentId,
       localPath: file.localPath,
     });
+  },
+
+  getFile: async (req, res) => {
+    const { token } = req.headers;
+    const { id } = req.params;
+    const size = req.query.size || 0;
+
+    if (!token) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const user = await dbClient.client.collection('users').findOne({ _id: ObjectId(token) });
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const file = await dbClient.client.collection('files').findOne({ _id: ObjectId(id) });
+    if (!file) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    if (file.userId.toString() !== user._id.toString() && !file.isPublic) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const { isPublic, userId, type } = file;
+
+    if ((isPublic && !user) || (user && userId.toString() !== user && !isPublic)) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    if (type === 'folder') {
+      return res.status(400).json({ error: 'A folder doesn\'t have content' });
+    }
+
+    const filePath = size === 0 ? file.localPath : `${file.localPath}_${size}`;
+
+    try {
+      const file = fs.readFileSync(filePath);
+      const mimetype = mime.contentType(file.name);
+      res.setHeader('Content-Type', mimetype);
+      return res.status(200).send(file);
+    } catch (err) {
+      return res.status(404).json({ error: 'Not found' });
+    }
   },
 };
 
