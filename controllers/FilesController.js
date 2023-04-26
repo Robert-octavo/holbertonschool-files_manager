@@ -38,6 +38,31 @@ POST /files should create a new file in DB and in disk:
       - localPath: for a type=file|image, the absolute path to the file save in local
     - Return the new file with a status code 201
 
+  - add the 2 new endpoints:
+
+GET /files/:id should retrieve the file document based on the ID:
+
+  - Retrieve the user based on the token:
+    - If not found, return an error Unauthorized with a status code 401
+  - If no file document is linked to the user and the ID passed as parameter, return an
+  error Not found with a status code 404
+  - Otherwise, return the file document
+
+GET /files should retrieve all users file documents for a specific parentId and with pagination:
+
+  - Retrieve the user based on the token:
+    - If not found, return an error Unauthorized with a status code 401
+  - Based on the query parameters parentId and page, return the list of file document
+    - parentId:
+      - No validation of parentId needed - if the parentId is not linked to any user
+      folder, returns an empty list
+      - By default, parentId is equal to 0 = the root
+    - Pagination:
+      - Each page should be 20 items max
+      - page query parameter starts at 0 for the first page. If equals to 1,
+      it means it’s the second page (form the 20th to the 40th), etc…
+      - Pagination can be done directly by the aggregate of MongoDB
+
 */
 
 const fs = require('fs');
@@ -129,6 +154,77 @@ const FilesController = {
       parentId: file.parentId,
       localPath: file.localPath,
     });
+  },
+
+  getShow: async (req, res) => {
+    const { token } = req.headers;
+    const { id } = req.params;
+
+    if (!token) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const user = await dbClient.client.collection('users').findOne({ _id: ObjectId(token) });
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const file = await dbClient.client.collection('files').findOne({ _id: ObjectId(id) });
+    if (!file) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    return res.status(200).json({
+      id: file._id,
+      userId: file.userId,
+      name: file.name,
+      type: file.type,
+      isPublic: file.isPublic,
+      parentId: file.parentId,
+      localPath: file.localPath,
+    });
+  },
+
+  getIndex: async (req, res) => {
+    const { token } = req.headers;
+    const { parentId } = req.query;
+    let { page } = req.query;
+
+    if (!token) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const user = await dbClient.client.collection('users').findOne({ _id: ObjectId(token) });
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const file = await dbClient.client.collection('files').findOne({ _id: ObjectId(parentId) });
+    if (!file) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    if (!page) {
+      page = 0;
+    }
+
+    const files = await dbClient.client.collection('files').aggregate([
+      { $match: { parentId: ObjectId(parentId) } },
+      { $skip: 20 * page },
+      { $limit: 20 },
+    ]).toArray();
+
+    const filesList = files.map((item) => ({
+      id: item._id,
+      userId: item.userId,
+      name: item.name,
+      type: item.type,
+      isPublic: item.isPublic,
+      parentId: item.parentId,
+      localPath: item.localPath,
+    }));
+
+    return res.status(200).json(filesList);
   },
 };
 
