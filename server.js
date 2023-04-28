@@ -7,16 +7,17 @@ create the Express server:
 
 */
 
-import express from 'express';
-import controllerRouting from './routes/index';
+const express = require('express');
+const routes = require('./routes');
 
-const port = process.env.PORT || 5000;
+const { PORT } = process.env;
+
 const app = express();
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
+app.use(routes); // load all routes from the file routes/index.js
 
-controllerRouting(app);
-
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+app.listen(PORT || 5000, () => {
+  console.log(`Server listening on port ${PORT || 5000}`);
 });
