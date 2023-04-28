@@ -15,39 +15,45 @@ DBClient should have:
 After the class definition, create and export an instance of DBClient called dbClient
 */
 
-const { MongoClient } = require('mongodb');
-const { DB_HOST, DB_PORT, DB_DATABASE } = process.env;
+import { MongoClient } from 'mongodb';
+
+const DB_HOST = process.env.DB_HOST || 'localhost';
+const DB_PORT = process.env.DB_PORT || 27017;
+const DB_DATABASE = process.env.DB_DATABASE || 'files_manager';
+const url = `mongodb://${DB_HOST}:${DB_PORT}`;
 
 class DBClient {
   constructor() {
-    this.client = new MongoClient(`mongodb://${DB_HOST || 'localhost'}:${DB_PORT || 27017}/${DB_DATABASE || 'files_manager'}`, { useUnifiedTopology: true });
-  }
-
-  async connect() {
-    await this.client.connect();
+    MongoClient.connect(url, { useUnifiedTopology: true }, (error, client) => {
+      if (error) {
+        console.log(error.message);
+      } else {
+        this.db = client.db(DB_DATABASE);
+        this.users = this.db.collection('users');
+        this.files = this.db.collection('files');
+      }
+    });
   }
 
   isAlive() {
-    return this.client.isConnected();
+    if (this.db) {
+      return true;
+    } else {
+      return false;
+    }
   }
 
   async nbUsers() {
-    const db = this.client.db();
-    const users = db.collection('users');
-    return await users.countDocuments();
+    const userCount = this.users.countDocuments();
+    return userCount;
   }
 
   async nbFiles() {
-    const db = this.client.db();
-    const files = db.collection('files');
-    return await files.countDocuments();
-  }
-
-  async close() {
-    await this.client.close();
+    const fileCount = this.files.countDocuments();
+    return fileCount;
   }
 }
 
 const dbClient = new DBClient();
 
-module.exports = dbClient;
+export default dbClient;
