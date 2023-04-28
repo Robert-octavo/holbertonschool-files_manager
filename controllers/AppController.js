@@ -10,25 +10,25 @@ contains the definition of the 2 endpoints:
 
 */
 
-import redisClient from '../utils/redis';
-import dbClient from '../utils/db';
+const redisClient = require('../utils/redis');
+const dbClient = require('../utils/db');
 
-class AppController {
-  static getStatus(req, res) {
+const AppController = {
+  getStatus: async (req, res) => {
     const status = {
       redis: redisClient.isAlive(),
       db: dbClient.isAlive(),
     };
-    res.status(200).send(status);
-  }
+    res.status(200).json(status);
+  },
 
-  static async getStats(req, res) {
+  getStats: async (req, res) => {
     const stats = {
       users: await dbClient.nbUsers(),
       files: await dbClient.nbFiles(),
     };
-    res.status(200).send(stats);
-  }
-}
+    res.status(200).json(stats);
+  },
+};
 
-export default AppController;
+module.exports = AppController;
