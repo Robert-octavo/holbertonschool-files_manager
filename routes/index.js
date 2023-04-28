@@ -32,26 +32,24 @@ one new endpoint:
 
 */
 
-const express = require('express');
-const AppController = require('../controllers/AppController');
-const UsersController = require('../controllers/UsersController');
-const AuthController = require('../controllers/AuthController');
-const UserController = require('../controllers/UsersController');
-const FilesController = require('../controllers/FilesController');
+import express from 'express';
+import AppController from '../controllers/AppController';
 
-const router = express.Router();
+function controllerRouting(app) {
+  const router = express.Router();
+  app.use('/', router);
 
-router.get('/status', AppController.getStatus);
-router.get('/stats', AppController.getStats);
-router.post('/users', UsersController.postNew);
-router.get('/connect', AuthController.getConnect);
-router.get('/disconnect', AuthController.getDisconnect);
-router.get('/users/me', UserController.getMe);
-router.post('/files', FilesController.postUpload);
-router.get('/files/:id', FilesController.getShow);
-router.get('/files', FilesController.getIndex);
-router.put('/files/:id/publish', FilesController.putPublish);
-router.put('/files/:id/unpublish', FilesController.putUnpublish);
-router.get('/files/:id/data', FilesController.getFile);
+  router.get('/status', (req, res) => {
+    AppController.getStatus(req, res);
+  });
 
-module.exports = router;
+  router.get('/stats', (req, res) => {
+    AppController.getStats(req, res);
+  });
+
+  router.post('/users', (req, res) => {
+    UsersController.postNew(req, res);
+  });
+}
+
+export default controllerRouting;
